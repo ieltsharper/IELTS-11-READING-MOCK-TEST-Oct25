@@ -216,7 +216,7 @@ function submitTest(auto){
  if(!auto){var u=unansweredCount();if(!confirm((u?'You have '+u+' unanswered question(s). ':'')+'Submit your test now? You cannot change your answers after submitting.'))return;}
  lastReport=report(auto);S.running=false;clearInterval(timerH);save();sendReport();
 }
-function fieldsOf(r){return {access_key:ACCESS,subject:'IELTS Reading Test: '+S.name,from_name:'IELTS Reading Test',name:S.name,total_time:fmt(r.tot),part_1_time:fmt(r.secs[0]),part_2_time:fmt(r.secs[1]),part_3_time:fmt(r.secs[2]),highlights_in_passages:String(r.np),highlights_in_questions:String(r.nq),notes_written:String(r.nn),message:r.text};}
+function fieldsOf(r){return {access_key:ACCESS,subject:'IELTS Reading Test: '+S.name,from_name:'IELTS Reading Test',name:S.name,total_time:fmt(r.tot),part_1_time:fmt(r.secs[0]),part_2_time:fmt(r.secs[1]),part_3_time:fmt(r.secs[2]),message:r.text};}
 function postForm(f){var fd=new FormData();Object.keys(f).forEach(function(k){fd.append(k,f[k]);});return fetch(URLW,{method:'POST',headers:{'Accept':'application/json'},body:fd});}
 function postJson(f){return fetch(URLW,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(f)});}
 function okRes(x){return x.json().then(function(j){if(j&&j.success)return j;throw new Error((j&&j.message)||('HTTP '+x.status));});}
