@@ -220,16 +220,16 @@ function submitTest(auto){
 }
 function fieldsOf(r){return {access_key:ACCESS,subject:'IELTS Reading Test: '+S.name,from_name:'IELTS Reading Test',name:S.name,total_time:fmt(r.tot),part_1_time:fmt(r.secs[0]),part_2_time:fmt(r.secs[1]),part_3_time:fmt(r.secs[2]),message:r.text};}
 function postForm(f){var fd=new FormData();Object.keys(f).forEach(function(k){fd.append(k,f[k]);});return fetch(URLW,{method:'POST',headers:{'Accept':'application/json'},body:fd});}
-function postJson(f){return fetch(URLW,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(f)});}
-function okRes(x){return x.json().then(function(j){if(j&&j.success)return j;throw new Error((j&&j.message)||('HTTP '+x.status));});}
+function okRes(x){if(x.status==429)throw new Error('the email service is busy right now. Please wait a few minutes before you press Try again');return x.json().then(function(j){if(j&&j.success)return j;throw new Error((j&&j.message)||('HTTP '+x.status));});}
 function sendReport(){
  var r=lastReport,f=fieldsOf(r);
  $('ovSend').classList.add('on');$('sendMsg').textContent='Sending your answers...';$('sendBtns').style.display='none';$('copyMsg').textContent='';
- postForm(f).then(okRes).catch(function(){return postJson(f).then(okRes);}).then(function(){
+ postForm(f).then(okRes).then(function(){
   S.submitted=true;save();$('ovSend').classList.remove('on');renderResults();$('ovDone').classList.add('on');
   $('doneTime').textContent='Total time: '+fmt(r.tot)+'  |  Part 1: '+fmt(r.secs[0])+'  |  Part 2: '+fmt(r.secs[1])+'  |  Part 3: '+fmt(r.secs[2]);
  }).catch(function(e){
-  var m=document.createElement('span');m.className='err';m.textContent='Your answers could not be sent ('+String(e.message||e)+'). Your progress is still saved. Press Try again, or use Download backup or Copy answers and send them to your teacher.';
+  var m=document.createElement('span');m.className='err';var why=(e instanceof TypeError)?'the email service could not be reached. It may be busy, or your internet connection dropped. Please wait a few minutes before you press Try again':String(e.message||e);
+  m.textContent='Your answers could not be sent ('+why+'). Your progress is still saved. Press Try again, or use Download backup or Copy answers and send them to your teacher.';
   var box=$('sendMsg');box.textContent='';box.appendChild(m);$('sendBtns').style.display='block';
  });
 }
