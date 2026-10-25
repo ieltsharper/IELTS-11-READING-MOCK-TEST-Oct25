@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>IELTS Academic Reading Test</title><link rel='stylesheet' href='style.css?v=3'></head><body>
+<title>IELTS Academic Reading Test</title><link rel='stylesheet' href='style.css?v=4'></head><body>
 <div class='top'><div class='logo'>IELTS<span>.</span></div>
 <div class='mid'><span id='who'></span><br><b>Reading</b></div>
 <div class='r'><span id='saved'>Progress saved</span><span id='timer'>60 minutes left</span><button class='submit' onclick='submitTest(false)'>Submit test</button></div></div>
@@ -56,7 +56,7 @@
 <button class='btn' onclick='startTest()'>Start test</button></div></div>
 <div class='ov' id='ovSend'><div class='card'><h1>Submitting</h1><p id='sendMsg'></p>
 <div id='sendBtns' style='display:none'><button class='btn' onclick='sendReport()'>Try again</button><button class='btn sec' onclick='backup()'>Download backup</button><button class='btn sec' onclick='copyReport()'>Copy answers</button><p id='copyMsg' style='margin:10px 0 0;font-size:14px'></p></div></div></div>
-<div class='ov' id='ovDone'><div class='card'><h1>Test submitted</h1><p>Thank you. Your answers have been sent to your teacher.</p><p id='doneTime'></p>
+<div class='ov scroll' id='ovDone'><div class='card wide'><h1>Test submitted</h1><p>Thank you. Your answers have been sent to your teacher.</p><p id='doneTime'></p><div id='resBody'></div>
 <button class='btn sec' style='margin:0' onclick='newAttempt()'>Start a new attempt</button></div></div>
 <div class='ov' id='ovResume' style='background:rgba(255,243,230,.88)'><div class='card'><h1>Welcome back</h1><p>Your saved progress has been restored.</p></div></div>
-<script src='app.js?v=4'></script></body></html>
+<script src='key.js?v=1'></script><script src='app.js?v=5'></script></body></html>

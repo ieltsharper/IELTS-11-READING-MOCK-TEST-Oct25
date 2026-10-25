@@ -193,11 +193,13 @@ function report(auto){
  L.push('Total time used: '+fmt(tot)+' of 60:00');
  for(var P=1;P<=NP;P++)L.push('Part '+P+' time: '+fmt(secs[P-1]));
  L.push('Unanswered questions: '+unansweredCount());
+ var G=grade();L.push('SCORE: '+G.tot+'/40 (Band '+G.band+')  |  Part 1: '+G.parts[0]+'/13  Part 2: '+G.parts[1]+'/13  Part 3: '+G.parts[2]+'/14');
  for(var P=1;P<=NP;P++){L.push('');L.push('--- PART '+P+' ---');
   R[P].forEach(function(it){if(it.k=='check'&&it.n==13)return;
    var lab=it.k=='check'?(GN(P,12)+'-'+GN(P,13)):GN(P,it.n);var v=getVal(P,it);
    var flag=S.flags[P+'-'+it.n]?' [flagged]':'';
-   L.push('Q'+lab+': '+(v===''?'(blank)':v)+flag);});}
+   var x=G.m[P+'-'+it.n],mk=x.max==2?'  ['+x.pts+'/2, answer: '+x.right+']':(x.pts?'  [correct]':'  [wrong, answer: '+x.right+']');
+   L.push('Q'+lab+': '+(v===''?'(blank)':v)+mk+flag);});}
  var ks=Object.keys(S.annots||{}),np=0,nq=0,nn=0,rows=[];
  ks.forEach(function(k){var a=S.annots[k],t=[];
   document.querySelectorAll('mark.hl[data-aid="'+k+'"]').forEach(function(m){t.push(m.textContent.trim());});
@@ -224,7 +226,7 @@ function sendReport(){
  var r=lastReport,f=fieldsOf(r);
  $('ovSend').classList.add('on');$('sendMsg').textContent='Sending your answers...';$('sendBtns').style.display='none';$('copyMsg').textContent='';
  postForm(f).then(okRes).catch(function(){return postJson(f).then(okRes);}).then(function(){
-  S.submitted=true;save();$('ovSend').classList.remove('on');$('ovDone').classList.add('on');
+  S.submitted=true;save();$('ovSend').classList.remove('on');renderResults();$('ovDone').classList.add('on');
   $('doneTime').textContent='Total time: '+fmt(r.tot)+'  |  Part 1: '+fmt(r.secs[0])+'  |  Part 2: '+fmt(r.secs[1])+'  |  Part 3: '+fmt(r.secs[2]);
  }).catch(function(e){
   var m=document.createElement('span');m.className='err';m.textContent='Your answers could not be sent ('+String(e.message||e)+'). Your progress is still saved. Press Try again, or use Download backup or Copy answers and send them to your teacher.';
@@ -242,7 +244,7 @@ function newAttempt(){try{localStorage.removeItem(KEY);}catch(e){}location.reloa
  var raw=null;try{raw=localStorage.getItem(KEY);}catch(e){}
  if(raw){try{var st=JSON.parse(raw);
   if(st&&st.name&&st.start){S=st;S.annots=S.annots||{};S.an=S.an||0;restore(S.ans);$('who').textContent=S.name;
-   if(S.submitted){$('ovStart').classList.remove('on');$('ovDone').classList.add('on');$('doneTime').textContent='Your answers were sent.';return;}
+   if(S.submitted){$('ovStart').classList.remove('on');renderResults();$('ovDone').classList.add('on');$('doneTime').textContent='Your answers were sent.';return;}
    $('ovStart').classList.remove('on');var P=S.active||1;S.active=P;
    document.querySelectorAll('.partview').forEach(function(v){v.classList.remove('on');});$('view'+P).classList.add('on');
    applyAnnots();refresh();
@@ -250,3 +252,30 @@ function newAttempt(){try{localStorage.removeItem(KEY);}catch(e){}location.reloa
    startTimer();$('ovResume').classList.add('on');setTimeout(function(){$('ovResume').classList.remove('on');},2500);return;}}catch(e){}}
  showPart(1);refresh();
 })();
+function AKD(){if(!AKD.v){var b=atob(AK_RAW),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);AKD.v=JSON.parse(new TextDecoder().decode(u));}return AKD.v;}
+function norm(v){return String(v).toLowerCase().replace(/[\-‐-—]/g,' ').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();}
+function bandOf(s){var t=[[39,9],[37,8.5],[35,8],[33,7.5],[30,7],[27,6.5],[23,6],[19,5.5],[15,5],[13,4.5],[10,4],[8,3.5],[6,3],[4,2.5]];for(var i=0;i<t.length;i++)if(s>=t[i][0])return t[i][1].toFixed(1);return s>0?'2.0':'0';}
+function grade(){
+ var K=AKD().q,m={},tot=0,parts=[0,0,0];
+ for(var P=1;P<=NP;P++)R[P].forEach(function(it){
+  if(it.k=='check'){if(it.n==13)return;var g=GN(P,12),k=K[g],ch=checkVals(),got=0;
+   ch.forEach(function(c){if(k.a.indexOf(c)>=0)got++;});got=Math.min(got,2);
+   m[P+'-'+it.n]={q:g+'–'+(g+1),your:ch.join(', '),right:k.a.join(', '),pts:got,max:2,e:k.e,P:P};tot+=got;parts[P-1]+=got;return;}
+  var g=GN(P,it.n),k=K[g],v=getVal(P,it);
+  var ok=v!==''&&k.a.some(function(a){return it.k=='text'?norm(a)===norm(v):a===v;});
+  m[P+'-'+it.n]={q:String(g),your:v,right:k.a[0],pts:ok?1:0,max:1,e:k.e,P:P};if(ok){tot++;parts[P-1]++;}
+ });
+ return {m:m,tot:tot,parts:parts,band:bandOf(tot)};
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function renderResults(){
+ var G=grade(),h=[];
+ h.push("<div class='score'><div class='big'>"+G.tot+"<span>/40</span></div><div><div class='band'>Band "+G.band+"</div><div class='pp'>Part 1: "+G.parts[0]+"/13 &nbsp;|&nbsp; Part 2: "+G.parts[1]+"/13 &nbsp;|&nbsp; Part 3: "+G.parts[2]+"/14</div></div></div>");
+ h.push("<p class='rhint'>Click a question to see the explanation.</p>");
+ for(var P=1;P<=NP;P++){h.push("<h3 class='rpart'>Part "+P+"</h3>");
+  R[P].forEach(function(it){var x=G.m[P+'-'+it.n];if(!x)return;
+   var cls=x.pts==x.max?'ok':(x.pts>0?'half':'bad'),mk=x.max==2?(x.pts+'/2'):(x.pts?'✓':'✗');
+   h.push("<details class='rq "+cls+"'><summary><span class='rn'>"+x.q+"</span><span class='rm'>"+mk+"</span><span class='ry'>Your answer: <b>"+(x.your===''?'<i>(blank)</i>':esc(x.your))+"</b></span><span class='rc'>Correct: <b>"+esc(x.right)+"</b></span></summary><div class='rex'>"+x.e+"</div></details>");});}
+ h.push("<div class='rtips'>"+AKD().tips+"</div>");
+ $('resBody').innerHTML=h.join('');
+}
