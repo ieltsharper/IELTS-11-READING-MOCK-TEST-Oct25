@@ -1,4 +1,6 @@
 var KEY='ielts_reading_test_v2',TOTAL=3600,NP=3,ACCESS='90ea711e-8154-4a1d-9ee5-a59a7937a79f',URLW='https://api.web3forms.com/submit';
+// Google Apps Script web app URL (see SETUP-GOOGLE-SHEET.md). Leave empty to use only Web3Forms email.
+var SHEET_URL='';
 var OFF={1:0,2:13,3:26};
 var R={'1':[{n:1,k:'radio',name:'p1q1'},{n:2,k:'radio',name:'p1q2'},{n:3,k:'radio',name:'p1q3'},{n:4,k:'radio',name:'p1q4'},{n:5,k:'radio',name:'p1q5'},{n:6,k:'radio',name:'p1q6'},{n:7,k:'text',id:'p1g7'},{n:8,k:'text',id:'p1g8'},{n:9,k:'text',id:'p1g9'},{n:10,k:'text',id:'p1g10'},{n:11,k:'text',id:'p1g11'},{n:12,k:'text',id:'p1g12'},{n:13,k:'text',id:'p1g13'}],'2':[{n:1,k:'zone',id:'p2dz1'},{n:2,k:'zone',id:'p2dz2'},{n:3,k:'zone',id:'p2dz3'},{n:4,k:'zone',id:'p2dz4'},{n:5,k:'zone',id:'p2dz5'},{n:6,k:'zone',id:'p2dz6'},{n:7,k:'text',id:'p2g7'},{n:8,k:'text',id:'p2g8'},{n:9,k:'text',id:'p2g9'},{n:10,k:'text',id:'p2g10'},{n:11,k:'text',id:'p2g11'},{n:12,k:'check'},{n:13,k:'check'}],'3':[{n:1,k:'radio',name:'p3q1'},{n:2,k:'radio',name:'p3q2'},{n:3,k:'radio',name:'p3q3'},{n:4,k:'radio',name:'p3q4'},{n:5,k:'radio',name:'p3q5'},{n:6,k:'radio',name:'p3q6'},{n:7,k:'radio',name:'p3q7'},{n:8,k:'radio',name:'p3q8'},{n:9,k:'radio',name:'p3q9'},{n:10,k:'radio',name:'p3q10'},{n:11,k:'zone',id:'p3dz11'},{n:12,k:'zone',id:'p3dz12'},{n:13,k:'zone',id:'p3dz13'},{n:14,k:'zone',id:'p3dz14'}]};
 var NQ={1:13,2:13,3:14};
@@ -210,7 +212,7 @@ function report(auto){
  L.push('');L.push('--- HIGHLIGHTS AND NOTES ---');
  L.push('Highlights in passages: '+np+' | in questions: '+nq+' | with notes: '+nn);
  rows.sort();rows.forEach(function(x){L.push(x);});
- return {text:L.join(NL),secs:secs,tot:tot,np:np,nq:nq,nn:nn};
+ return {text:L.join(NL),secs:secs,tot:tot,np:np,nq:nq,nn:nn,G:G,auto:auto,un:unansweredCount()};
 }
 var lastReport=null;
 function submitTest(auto){
@@ -219,12 +221,18 @@ function submitTest(auto){
  lastReport=report(auto);S.running=false;clearInterval(timerH);save();sendReport();
 }
 function fieldsOf(r){return {access_key:ACCESS,subject:'IELTS Reading Test: '+S.name,from_name:'IELTS Reading Test',name:S.name,total_time:fmt(r.tot),part_1_time:fmt(r.secs[0]),part_2_time:fmt(r.secs[1]),part_3_time:fmt(r.secs[2]),message:r.text};}
+function sheetFields(r){var G=r.G,a=[];
+ for(var P=1;P<=NP;P++)R[P].forEach(function(it){var x=G.m[P+'-'+it.n];if(x)a.push({q:x.q.replace('–','-'),v:x.your,pts:x.pts,max:x.max});});
+ return {name:S.name,score:String(G.tot),band:G.band,part1_score:String(G.parts[0]),part2_score:String(G.parts[1]),part3_score:String(G.parts[2]),total_time:fmt(r.tot),part_1_time:fmt(r.secs[0]),part_2_time:fmt(r.secs[1]),part_3_time:fmt(r.secs[2]),unanswered:String(r.un),how:r.auto?'Time ran out':'Student pressed Submit',highlights_passages:String(r.np),highlights_questions:String(r.nq),notes:String(r.nn),answers:JSON.stringify(a),message:r.text};}
+function postSheet(f){return fetch(SHEET_URL,{method:'POST',body:new URLSearchParams(f)});}
+function sendWeb3(f){return postForm(f).then(okRes);}
+function sendAll(r){if(!SHEET_URL)return sendWeb3(fieldsOf(r));return postSheet(sheetFields(r)).then(okRes).catch(function(){return sendWeb3(fieldsOf(r));});}
 function postForm(f){var fd=new FormData();Object.keys(f).forEach(function(k){fd.append(k,f[k]);});return fetch(URLW,{method:'POST',headers:{'Accept':'application/json'},body:fd});}
 function okRes(x){if(x.status==429)throw new Error('the email service is busy right now. Please wait a few minutes before you press Try again');return x.json().then(function(j){if(j&&j.success)return j;throw new Error((j&&j.message)||('HTTP '+x.status));});}
 function sendReport(){
- var r=lastReport,f=fieldsOf(r);
+ var r=lastReport;
  $('ovSend').classList.add('on');$('sendMsg').textContent='Sending your answers...';$('sendBtns').style.display='none';$('copyMsg').textContent='';
- postForm(f).then(okRes).then(function(){
+ sendAll(r).then(function(){
   S.submitted=true;save();$('ovSend').classList.remove('on');renderResults();$('ovDone').classList.add('on');
   $('doneTime').textContent='Total time: '+fmt(r.tot)+'  |  Part 1: '+fmt(r.secs[0])+'  |  Part 2: '+fmt(r.secs[1])+'  |  Part 3: '+fmt(r.secs[2]);
  }).catch(function(e){
